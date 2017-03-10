@@ -63,7 +63,11 @@ class VoiceState:
             self.current = await self.songs.get()
             self.queue.remove(self.current)
             await asyncio.sleep(1)
-            await self.bot.send_message(self.current.channel, "Now playing {}".format(self.current))
+            em = discord.Embed(description="\u200b")
+            em.title = "Now Playing"
+            em.color = 0x7CFC00
+            em.add_field(name="Currently", value=self.current)
+            await self.bot.send_message(self.current.channel, embed=em)
             self.current.player.volume = self.volume
             self.current.player.start()
             log.debug("\"{}\" is now playing in \"{}\" on \"{}\"".format(self.current.player.title, self.voice.channel.name, self.current.channel.server.name))
@@ -99,7 +103,7 @@ class Music:
     async def connect(self, ctx):
         """Summons the bot to your current voice channel"""
         if ctx.message.author.voice_channel is None:
-            await self.bot.say("You are not in a voice channel")
+            await self.bot.say("Error. You aren't in a voice channel. Please connect to one and try again.")
             return
         state = self.get_voice_state(ctx.message.server)
         if state.voice is None:
@@ -134,12 +138,21 @@ class Music:
                 return
             player.volume = state.volume
             entry = VoiceEntry(ctx.message, player)
-            await self.bot.say("Enqueued {}".format(entry))
-            await self.bot.say("***Temporary Notice***: We are aware of the bot skipping songs and such, please try to limit your queue up to 4 or 3 songs. We're gonna have to work this issue when this bot is rewritten.")
+            em = discord.Embed(description="\u200b")
+            em.title = "Enqueued"
+            em.color = 0x7CFC00
+            em.add_field(name="Song", value=entry)
+            await self.bot.say(embed=em)
+            #enough of this
+            #await self.bot.say("***Temporary Notice***: We are aware of the bot skipping songs and such, please try to limit your queue up to 4 or 3 songs. We're gonna have to work this issue when this bot is rewritten.")
             await state.songs.put(entry)
             state.queue.append(entry)
         except AttributeError:
-            await self.bot.say("You have not connected the bot to a voice server yet.")
+            em = discord.Embed(description="\u200b")
+            em.title = "Unable to queue a song."
+            em.color = 0x8C001A
+            em.add_field(name="Reason", value="Bot isn't connected to a voice server.")
+            await self.bot.say(embed=em)
         except Exception as e:
             await self.bot.say(traceback.format_exc())
             await self.bot.say("If the error contains that song isn't subscriptable or something like that, it's because one of these three things: 1. Bot can't play it since it's not allowed in the area it's hosted, aka France. 2. No song found. 3. Copyright issues, or the uploader fucked up the song data.")
@@ -153,9 +166,17 @@ class Music:
             player = state.player
             player.volume = amount / 100
             state.volume = amount / 100
-            await self.bot.say("Set the volume to `{:.0%}`".format(player.volume))
+            em = discord.Embed(description="\u200b")
+            em.title = "Volume has been set"
+            em.color = 0x7CFC00
+            em.add_field(name="Value changed.", value="Now {:.0%}".format(player.volume))
+            await self.bot.say(embed=em)
         else:
-            await self.bot.say("Nothing is playing!")
+            em = discord.Embed(description="\u200b")
+            em.title = "Unable to change volume."
+            em.color = 0x8C001A
+            em.add_field(name="Reason", value="There's nothing playing.")
+            await self.bot.say(embed=em)
 
     @commands.command(pass_context=True)
     async def disconnect(self, ctx):
@@ -183,7 +204,11 @@ class Music:
         """Vote to skip a song. Server mods, the server owner, bot developers, and the song requester can skip the song"""
         state = self.get_voice_state(ctx.message.server)
         if not state.is_playing():
-            await self.bot.say("Nothing is playing!")
+            em = discord.Embed(description="\u200b")
+            em.title = "Unable to skip a song."
+            em.color = 0x8C001A
+            em.add_field(name="Reason: Nothing's playing!")
+            await self.bot.say(embed=em)
             return
         voter = ctx.message.author
         mod_role_name = read_data_entry(ctx.message.server.id, "mod-role")
